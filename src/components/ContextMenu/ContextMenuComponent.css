@@ -1,0 +1,33 @@
+/* Terminal container styling */
+
+:root {
+    --hacker-green: #0f0;
+    --hacker-dark-green: #006600;
+    --hacker-bg: #000;
+    --hacker-glow: 0 0 10px #0f0, 0 0 20px #0f0;
+  }
+  
+  body {
+    background-color: #000;
+    color: var(--hacker-green);
+    font-family: 'Inconsolata', monospace;
+  }
+  
+  /* Context menu styling */
+  .context-menu-content {
+    background-color: #000 !important;
+    border: 1px solid var(--hacker-dark-green) !important;
+    color: var(--hacker-green) !important;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.3) !important;
+  }
+  
+  .context-menu-item {
+    color: var(--hacker-green) !important;
+  }
+  
+  .context-menu-item:hover,
+  .context-menu-item:focus {
+    background-color: #001100 !important;
+    color: #fff !important;
+    text-shadow: 0 0 5px var(--hacker-green) !important;
+  }
