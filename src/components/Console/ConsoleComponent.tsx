@@ -1,51 +1,100 @@
 import { useState, useEffect, useRef, MouseEvent } from 'react'
 import './Console.css'
 import { InputWithButton } from '../ui/InputWithButton'
+import { handleCommand } from './commandHandler';
+import { getSession } from './sessionManager';
+import { Session } from '@supabase/supabase-js';
+
 
 interface ConsoleComponentProps {
     title: string;
-    onCommand: (command: string) => void;
+    id: string;
     initialPosition?: { x: number; y: number };
     initialSize?: { width: number; height: number };
+    supabaseConnection?: any;
     onClose?: () => void;
 }
 
+interface HistoryItem {
+    command: string;
+    response: string;
+}
+
+function onCommand(command: string, session: Session | null, supabaseConnection: any, terminalId: string): Promise<string> {
+    return handleCommand(command, session, supabaseConnection, terminalId);
+}
+
+
 export default function ConsoleComponent({
-    title,
-    onCommand,
+    title: initialTitle,
+    id,
     initialPosition = { x: 100, y: 100 },
     initialSize = { width: 600, height: 400 },
+    supabaseConnection,
     onClose
 }: ConsoleComponentProps) {
-    const [history, setHistory] = useState<string[]>([]);
+    const [history, setHistory] = useState<HistoryItem[]>([]);
     const contentRef = useRef<HTMLDivElement>(null);
     const consoleRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement | null>(null);
 
-    // Dragging state
+    // dragging
     const [position, setPosition] = useState(initialPosition);
     const [size, setSize] = useState(initialSize);
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-    // Resizing state
     const [isResizing, setIsResizing] = useState(false);
     const [resizeDirection, setResizeDirection] = useState('');
 
-    // Active state for z-index
+    const [title, setTitle] = useState(initialTitle);
+    const [session, setSession] = useState<Session | null>(getSession());
+
     const [isActive, setIsActive] = useState(false);
 
     const handleClose = (e: MouseEvent) => {
-        e.stopPropagation(); // Prevent triggering other click handlers
+        e.stopPropagation();
         if (onClose) {
             onClose();
         }
     };
 
     const addToHistory = (value: string) => {
-        onCommand(value);
-        setHistory([...history, value]);
+        onCommand(value, session, supabaseConnection, id).then((commandResponse: string) => {
+            setHistory(prev => [...prev, { command: value, response: commandResponse }]);
+        });
     }
+
+    useEffect(() => {
+        const handleTitleChange = (event: Event) => {
+            const customEvent = event as CustomEvent<{ title: string, terminalId: string }>;
+            console.log("Title change event received:", customEvent.detail);
+
+            if (customEvent.detail.terminalId === id) {
+                console.log(`Updating title for terminal ${id} to: ${customEvent.detail.title}`);
+                setTitle(customEvent.detail.title);
+            }
+        };
+
+        window.addEventListener('terminalTitleChanged', handleTitleChange);
+
+        return () => {
+            window.removeEventListener('terminalTitleChanged', handleTitleChange);
+        };
+    }, [id]);
+
+    useEffect(() => {
+        const handleSessionChange = (event: Event) => {
+            const customEvent = event as CustomEvent<{ session: Session | null }>;
+            setSession(customEvent.detail.session);
+        };
+
+        window.addEventListener('sessionChanged', handleSessionChange);
+
+        return () => {
+            window.removeEventListener('sessionChanged', handleSessionChange);
+        };
+    }, []);
 
     useEffect(() => {
         if (contentRef.current) {
@@ -106,7 +155,6 @@ export default function ConsoleComponent({
                 const mouseX = e.clientX;
                 const mouseY = e.clientY;
 
-                // Calculate new dimensions and positions based on the resize direction
                 switch (resizeDirection) {
                     case 'top-left':
                         // For top-left, both width/height and position need to change
@@ -149,7 +197,6 @@ export default function ConsoleComponent({
                         });
                         break;
 
-                    // Handle edge resize cases
                     case 'top':
                         // Resize from top edge - height changes and y position changes
                         const newHeight4 = Math.max(150, position.y + size.height - mouseY);
@@ -295,10 +342,11 @@ export default function ConsoleComponent({
                                     <div key={index} className="terminal-command">
                                         <div className="flex">
                                             <span className="terminal-prompt">h4x0r@m4trix:~$</span>
-                                            <span>{item}</span>
+                                            <span>{item.command}</span>
                                         </div>
                                         <div className="terminal-response">
-                                            Command processed: "{item}"
+                                            <span className="response-prefix">&gt; </span>
+                                            {item.response}
                                         </div>
                                     </div>
                                 ))}

@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
-import { InputWithButton } from './components/ui/InputWithButton'
 import ConsoleComponent from './components/Console/ConsoleComponent'
 import { ConsoleInfo } from './components/Console/types'
 import ContextMenuComponent from './components/ContextMenu/ContextMenuComponent'
+import { createClient } from '@supabase/supabase-js'
 
 function App() {
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+  const supabase = createClient('https://tdnqbinubcyorkhemmvn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkbnFiaW51YmN5b3JraGVtbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxODA2MTcsImV4cCI6MjA1OTc1NjYxN30.9DHjJzUtA_38JjcDWZ6XkoLztw2FMJiVZQHuBZChqms');
   const [consoles, setConsoles] = useState<ConsoleInfo[]>([
     {
       id: 'terminal_1',
@@ -23,10 +24,6 @@ function App() {
       visible: true,
     }
   ]);
-  
-  function onCommand(command: string) {
-    console.log("Command received:", command)
-  }
 
   const handleContextMenu = (event: React.MouseEvent) => {
     setContextMenuPosition({ x: event.clientX, y: event.clientY });
@@ -43,10 +40,8 @@ function App() {
   };
 
   const handleCreateConsole = () => {
-    // Generate a unique ID
     const newId = `terminal_${consoles.length + 1}`;
     
-    // Create a new console at a random position
     const newConsole: ConsoleInfo = {
       id: newId,
       title: `terminal_${newId}`,
@@ -69,9 +64,10 @@ function App() {
           <ConsoleComponent 
             key={console.id}
             title={console.title} 
-            onCommand={onCommand}
+            id={console.id}
             initialPosition={console.position}
             initialSize={console.size}
+            supabaseConnection={supabase}
             onClose={() => handleCloseConsole(console.id)}
           />
         </div>
